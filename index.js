@@ -21,7 +21,12 @@ function mainCMD() {
         const cmd = args.shift().toLowerCase()
 
         if (main.commands.has(cmd)) {
-            await main.commands.get(cmd).run(main, args)
+            if (main.commands.get(cmd).rule && !main.commands.get(cmd).rule(main)) {
+                logger.error("You can't use the command " + cmd.yellow() + " in this context !")
+            }
+            else {
+                await main.commands.get(cmd).run(main, args)
+            }
         }
         else {
             logger.error("Unknown command " + cmd.red())

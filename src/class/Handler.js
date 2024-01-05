@@ -3,6 +3,8 @@ const net = require("net"),
     ask = require("../utils/ask")
 
 class Handler {
+    #sessionInput = false
+
     constructor(handlerName, options = {publicAddress: "127.0.0.1", port: 1234}) {
         this.name = handlerName
         this.socket = null
@@ -45,11 +47,11 @@ class Handler {
     async interact() {
         return new Promise(async (resolve, reject) => {
             logger.log(`[${this.name.yellow()}] Interacting with ${this.session.remoteAddress}:${this.session.remotePort}`)
-            while (true) {
+            while (this.#sessionInput) {
                 await ask(`${this.name.yellow()} $`).then(async (answer) => {
                     if (answer == "exit") {
-                        this.session.end()
-                        return resolve()
+                        this.stop()
+                        resolve()
                     }
                     await this.send(answer)
                     await this.checkBuffer()
@@ -61,8 +63,25 @@ class Handler {
         })
     }
 
+    async stop() {
+        return new Promise((resolve, reject)=> {
+            this.session = null
+            this.#sessionInput = false
+            this.status = 0
+            this.server.close((err) => {
+                if (err) {
+                    reject(err)
+                }
+                else {
+                    resolve()
+                }
+            })
+        })
+    }
+
     async start() {
         return new Promise(async (resolve, reject) => {
+            this.#sessionInput = true
             await this.listen()
             await (new Promise((resolve, reject) => {
                 this.server.on("connection", async (socket) => {
@@ -72,7 +91,6 @@ class Handler {
                         this.outBuffer.push(data)
                     })
                     this.session.on("end", () => {
-                        this.session = null
                         logger.log(`[${this.name.yellow()}] Connection closed`)
                         resolve()
                     })
