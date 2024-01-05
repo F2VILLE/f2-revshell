@@ -25,7 +25,11 @@ function mainCMD() {
                 logger.error("You can't use the command " + cmd.yellow() + " in this context !")
             }
             else {
-                await main.commands.get(cmd).run(main, args)
+                try {
+                    await main.commands.get(cmd).run(main, args)
+                } catch (error) {
+                    logger.error(error)
+                }
             }
         }
         else {

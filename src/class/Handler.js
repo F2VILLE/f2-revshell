@@ -1,6 +1,7 @@
 const net = require("net"),
     logger = require("../utils/logger"),
-    ask = require("../utils/ask")
+    ask = require("../utils/ask"),
+    fs = require("fs")
 
 class Handler {
     #sessionInput = false
@@ -13,6 +14,8 @@ class Handler {
         this.status = 0
         this.server = net.createServer()
         this.outBuffer = []
+        this.plugins = []
+        this.loadPlugins()
     }
 
     async listen() {
@@ -44,6 +47,28 @@ class Handler {
         })
     }
 
+    async loadPlugins() {
+        return new Promise((resolve, reject) => {
+            const pluginsFolder = process.cwd() + "/config/plugins"
+            const errors = []
+            for (const folder of fs.readdirSync(pluginsFolder)) {
+                if (fs.statSync(pluginsFolder + "/" + folder).isDirectory()) {
+                    try {
+                        const prop = require(pluginsFolder + "/" + folder)
+                        if (prop && prop.run && prop.name) {
+                            this.plugins.set(prop.name, prop.run)
+                        }
+                    } catch (error) {
+                        errors.push({
+                            folder: (pluginsFolder + "/"+ folder),
+                            error
+                        })
+                    }
+                }
+            }
+        })
+    }
+
     async interact() {
         return new Promise(async (resolve, reject) => {
             logger.log(`[${this.name.yellow()}] Interacting with ${this.session.remoteAddress}:${this.session.remotePort}`)
@@ -53,7 +78,14 @@ class Handler {
                         this.stop()
                         resolve()
                     }
-                    await this.send(answer)
+                    const args = answer.trim().split(" ")
+                    const cmd = args.shift()
+                    if (this.plugins.has(cmd)) {
+                        await this.plugins.get(cmd).run(this)
+                    }
+                    else {
+                        await this.send(answer)
+                    }
                     await this.checkBuffer()
                     while (this.outBuffer.length > 0) {
                         console.log(this.outBuffer.shift())

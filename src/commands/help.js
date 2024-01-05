@@ -6,8 +6,8 @@ module.exports = {
     usage: "help",
     run: (main) => {
         main.commands.forEach((cmd) => {
-            console.log("")
             if (cmd.rule && !cmd.rule(main)) return 
+            console.log("")
             logger.log(cmd.name.yellow() + " : " + cmd.description + (cmd.usage ? ("\n    Usage : " + cmd.usage).gray() : ""))
         })
     }
